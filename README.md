@@ -2,7 +2,11 @@
 
 <img align="center" width="236" height="236" alt="falquor 3" src="https://github.com/user-attachments/assets/fe8a85ba-2c35-451d-aefd-5844d977dc2b" />
 
-<img width="810" height="170" alt="falquor_horizontal_white" src="https://github.com/user-attachments/assets/26974add-c425-4574-97cd-d57bba62e875" />
+</div>
+
+<div align="center">
+
+<img width="auto" height="100" alt="falquor_horizontal_white" src="https://github.com/user-attachments/assets/26974add-c425-4574-97cd-d57bba62e875" />
 
 </div>
 
