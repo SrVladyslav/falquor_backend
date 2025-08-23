@@ -1,0 +1,119 @@
+services:
+  django:
+    build: .
+    container_name: main_backend
+    volumes:
+      - .:/usr/src/app/
+      - ./static:/usr/src/app/core/staticfiles
+
+    ports:
+      - "8000:8000"
+    depends_on:
+      - redis 
+      - rabbitmq
+    env_file:
+      - .env
+    networks:
+      - backend
+  
+  celery_worker:
+    build: .
+    container_name: worker
+    command: celery -A core worker --loglevel=INFO -Q default
+    volumes:
+      - .:/usr/src/app/
+    depends_on:
+      - redis
+      - rabbitmq
+      - django
+    env_file:
+      - .env
+    networks:
+      - backend
+  
+  celery_email_broker:
+    build: .
+    container_name: email_worker
+    command: celery -A core.celery_email_broker worker --loglevel=INFO -Q emails
+    volumes:
+      - .:/usr/src/app/
+    depends_on:
+      - rabbitmq
+      - redis
+      - django
+    env_file:
+      - .env
+    networks:
+      - backend
+  
+  redis:
+    image: "redis:8.0-alpine"
+    container_name: redis_workers
+    volumes:
+      - redis_data:/data
+      - ./redis.conf:/etc/redis/redis.conf
+    command: ["redis-server", "/etc/redis/redis.conf"]
+    restart: always
+    ports:
+      - "6379:6379"
+    env_file:
+      - .env
+    networks:
+      - backend
+  
+  # redis_insight:
+  #   image: redislabs/redisinsight:2.66
+  #   container_name: redis_insight
+  #   restart: always
+  #   ports:
+  #     - "5540:5540"
+  #   depends_on:
+  #     - redis
+  #   env_file:
+  #     - .env
+  #   volumes:
+  #     - redis_insights_data:/db
+  #   networks:
+  #     - backend
+  
+  rabbitmq:
+    image: rabbitmq:4-alpine
+    container_name: rabbitmq
+    hostname: rabbitmq
+    restart: always
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - backend
+    environment:
+      - RABBITMQ_DEFAULT_USER=guest
+      - RABBITMQ_DEFAULT_PASS=guest
+    env_file:
+      - .env
+  
+  static-proxy:
+    image: nginx:latest
+    container_name: nginx
+    ports:
+      - "8001:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./static:/static:ro
+    depends_on:
+      - django
+    networks:
+      - backend
+
+volumes:
+  redis_data:
+  rabbitmq_data:
+  # redis_insights_data:
+#   elasticsearch:
+
+
+networks:
+  backend:
+    driver: bridge

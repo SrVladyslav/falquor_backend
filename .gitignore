@@ -1,0 +1,85 @@
+# Crypto
+settings/config/crypto/*
+settings/*
+settings
+
+certs
+certs/*
+/certs
+
+# Redis
+redis.conf
+/redis.conf
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Environment variables
+.env
+.venv
+env
+
+# Django stuff:
+*.log
+db.sqlite3
+media/
+staticfiles/
+*.pot
+
+# Migrations
+*/migrations/*
+
+# If you are using Docker:
+*.pid
+*.seed
+*.out
+
+# Pytest
+.cache/
+
+# IDEs
+.vscode/
+.idea/
+
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db
+ehthumbs.db
+
+# Python virtual environment
+venv/
+ENV/
+env/
+
+# Jupyter Notebook Checkpoints
+.ipynb_checkpoints/
+
+# Coverage reports
+htmlcov/
+*.cover
+.coverage
+.coverage.*
+.cache
+
+# MyPy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Bandit security
+.bandit/
+
+# Flask secret key
+instance/
+
+# Temporary files
+*.swp
+*~
+*.tmp

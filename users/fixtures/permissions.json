@@ -1,0 +1,17 @@
+[
+    {
+        "id": 0,
+        "codename": "can_invite_users",
+        "name": "Can invite users"
+    },
+    {
+        "id": 1,
+        "codename": "can_view_logs",
+        "name": "Can view logs"
+    },
+    {
+        "id": 2,
+        "codename": "can_acces_internal_apis",
+        "name": "Can access internal API"
+    }
+]
