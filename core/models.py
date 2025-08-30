@@ -1,11 +1,14 @@
-from django.db import models
+from django.db import models, transaction, router, IntegrityError
 import uuid
 from django.utils.text import slugify
-from core.utils.base import current_time
+from core.utils.base import current_time, generate_nanoid
 from django.core.exceptions import ValidationError
-from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelation
-from django.contrib.contenttypes.models import ContentType
+
+# from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelation
+# from django.contrib.contenttypes.models import ContentType
 from core.utils.base import HEX_COLOR_VALIDATOR
+from typing import Optional
+from django.core.validators import RegexValidator
 import pycountry
 
 LANGUAGE_DICT = {
@@ -57,6 +60,51 @@ class BaseUUID(models.Model):
 
     class Meta:
         abstract = True
+
+
+class BaseNanoID(models.Model):
+    """Abstract class which sets the primary key as NanoID."""
+
+    wid = models.CharField(
+        max_length=12, primary_key=True, editable=False, default=generate_nanoid
+    )
+
+    class Meta:
+        abstract = True
+
+    @classmethod
+    def _new_wid(cls) -> str:
+        """Generate a new NanoID candidate."""
+        return generate_nanoid()
+
+    def save(self, *args, **kwargs):
+        """
+        Save with collision- and race-safety:
+        - If wid missing, generate one.
+        - Retry on IntegrityError up to `max_attempts`.
+        """
+        max_attempts: int = kwargs.pop("max_attempts", 10)
+        using: Optional[str] = kwargs.get("using") or router.db_for_write(
+            self.__class__
+        )
+
+        # Ensure we have a candidate before first attempt
+        if not self.wid:
+            self.wid = self._new_wid()
+
+        # Try to persist; if a race triggers IntegrityError on PK, retry with a new wid
+        for attempt in range(1, max_attempts + 1):
+            try:
+                with transaction.atomic(using=using):
+                    return super().save(*args, **kwargs)
+            except IntegrityError as exc:
+                # If the PK collided (extremely rare), generate a new candidate and retry
+                if attempt < max_attempts:
+                    self.wid = self._new_wid()
+                    continue
+                raise RuntimeError(
+                    f"Failed to persist unique wid after {max_attempts} attempts"
+                ) from exc
 
 
 class MarketingSettings(models.Model):
@@ -170,56 +218,56 @@ class BaseTag(models.Model):
         super().save(*args, **kwargs)
 
 
-class TimeSlot(models.Model):
-    start = models.TimeField(default=current_time)
-    end = models.TimeField()
+# class TimeSlot(models.Model):
+#     start = models.TimeField(default=current_time)
+#     end = models.TimeField()
 
-    class Meta:
-        verbose_name = "Time Slot"
-        verbose_name_plural = "Time Slots"
-        ordering = ["start"]
+#     class Meta:
+#         verbose_name = "Time Slot"
+#         verbose_name_plural = "Time Slots"
+#         ordering = ["start"]
 
-    def __str__(self):
-        return f"{self.start} - {self.end}"
+#     def __str__(self):
+#         return f"{self.start} - {self.end}"
 
-    def clean(self):
-        if self.end <= self.start:
-            raise ValidationError({"end": "End time must be greater than start time."})
-
-
-class Day(models.TextChoices):
-    MONDAY = "MONDAY", "Monday"
-    TUESDAY = "TUESDAY", "Tuesday"
-    WEDNESDAY = "WEDNESDAY", "Wednesday"
-    THURSDAY = "THURSDAY", "Thursday"
-    FRIDAY = "FRIDAY", "Friday"
-    SATURDAY = "SATURDAY", "Saturday"
-    SUNDAY = "SUNDAY", "Sunday"
+#     def clean(self):
+#         if self.end <= self.start:
+#             raise ValidationError({"end": "End time must be greater than start time."})
 
 
-class WeekWorkingHours(models.Model):
-    # Hot deactivation of working hours
-    deactivate_working_hours = models.BooleanField(default=False)
+# class Day(models.TextChoices):
+#     MONDAY = "MONDAY", "Monday"
+#     TUESDAY = "TUESDAY", "Tuesday"
+#     WEDNESDAY = "WEDNESDAY", "Wednesday"
+#     THURSDAY = "THURSDAY", "Thursday"
+#     FRIDAY = "FRIDAY", "Friday"
+#     SATURDAY = "SATURDAY", "Saturday"
+#     SUNDAY = "SUNDAY", "Sunday"
 
-    # Working hours
-    time_slot = models.ForeignKey(
-        TimeSlot, on_delete=models.CASCADE, related_name="working_hours"
-    )
-    day = models.CharField(max_length=10, choices=Day.choices, default=Day.MONDAY)
-    notes = models.CharField(max_length=256, blank=True, default="")
 
-    # --- Generic owner (the entity this row belongs to) ---
-    content_type = models.ForeignKey(
-        ContentType, on_delete=models.CASCADE, db_index=True
-    )
-    object_id = models.PositiveBigIntegerField(db_index=True)
-    company = GenericForeignKey("content_type", "object_id")
+# class WeekWorkingHours(models.Model):
+#     # Hot deactivation of working hours
+#     deactivate_working_hours = models.BooleanField(default=False)
 
-    class Meta:
-        verbose_name = "Week Working Hours"
-        verbose_name_plural = "Week Working Hours"
-        ordering = ["time_slot"]
+#     # Working hours
+#     time_slot = models.ForeignKey(
+#         TimeSlot, on_delete=models.CASCADE, related_name="working_hours"
+#     )
+#     day = models.CharField(max_length=10, choices=Day.choices, default=Day.MONDAY)
+#     notes = models.CharField(max_length=256, blank=True, default="")
 
-    def __str__(self):
-        state = "OPEN" if not self.deactivate_working_hours else "OFF"
-        return f"{self.content_type.model}:{self.object_id} | {self.day} {self.time_slot} {state}"
+#     # --- Generic owner (the entity this row belongs to) ---
+#     content_type = models.ForeignKey(
+#         ContentType, on_delete=models.CASCADE, db_index=True
+#     )
+#     object_id = models.PositiveBigIntegerField(db_index=True)
+#     company = GenericForeignKey("content_type", "object_id")
+
+#     class Meta:
+#         verbose_name = "Week Working Hours"
+#         verbose_name_plural = "Week Working Hours"
+#         ordering = ["time_slot"]
+
+#     def __str__(self):
+#         state = "OPEN" if not self.deactivate_working_hours else "OFF"
+#         return f"{self.content_type.model}:{self.object_id} | {self.day} {self.time_slot} {state}"

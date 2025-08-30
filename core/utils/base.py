@@ -5,11 +5,19 @@ from datetime import datetime, time, date
 import pytz
 from django.core.validators import RegexValidator
 import re
+from nanoid import generate
 
 HEX_COLOR_VALIDATOR = RegexValidator(
     regex=r"^#([0-9A-Fa-f]{6})$",
     message="Color must be a hex code like #112233 (6 hex digits).",
 )
+
+NANOID_ALPHABET = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+
+
+def generate_nanoid(size: int = 12) -> str:
+    """Return a fresh NanoID using our custom alphabet."""
+    return generate(NANOID_ALPHABET, size)
 
 
 def obfuscate_email(email: str, visible: int = 3) -> str:

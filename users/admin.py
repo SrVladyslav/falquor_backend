@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
-from users.models import Account, UserToken
+from users.models import Account, UserToken, WorkspaceMember
 
 
 class AccountAdmin(UserAdmin):
@@ -15,6 +15,9 @@ class AccountAdmin(UserAdmin):
         "is_superuser",
         "date_joined",
         "last_login",
+        "preferred_locale",
+        "selected_workspace",
+        "hide_email",
     )
     search_fields = ("email", "username")
     readonly_fields = ("uuid", "date_joined", "last_login")
@@ -34,6 +37,16 @@ class AccountAdmin(UserAdmin):
                     "is_superuser",
                     "groups",
                     "user_permissions",
+                )
+            },
+        ),
+        (
+            "Metadata",
+            {
+                "fields": (
+                    "preferred_locale",
+                    "selected_workspace",
+                    "hide_email",
                 )
             },
         ),
@@ -92,4 +105,5 @@ class UserTokenAdmin(admin.ModelAdmin):
 
 
 admin.site.register(Account, AccountAdmin)
+admin.site.register(WorkspaceMember)
 print("AccountAdmin registered...")

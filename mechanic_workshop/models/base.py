@@ -2,9 +2,10 @@ from django.db import models
 from core.models import (
     BusinessOrganization,
     BaseTimestamp,
-    WeekWorkingHours,
+    # WeekWorkingHours,
     Language,
 )
+from core.ctmodels import WeekWorkingHours
 from users.models import Account
 from django.contrib.contenttypes.fields import GenericRelation
 
@@ -83,11 +84,15 @@ class MechanicWorkshopSpecialization(models.Model):
         MechanicWorkshop,
         on_delete=models.CASCADE,
         related_name="workshop_specializations",
+        blank=True,
+        null=True,
     )
     specialization = models.ForeignKey(
-        "MechanicWorkshopSpecialization",
+        "Specialization",
         on_delete=models.CASCADE,
         related_name="workshop_links",
+        blank=True,
+        null=True,
     )
 
     # Personalization per link
@@ -104,5 +109,5 @@ class MechanicWorkshopSpecialization(models.Model):
         return f"{self.workshop} | {self.specialization} ({'Licensed' if self.is_licensed else 'Unlicensed'})"
 
 
-class MechanicWorkshopSpecialization(models.Model):
+class Specialization(models.Model):
     name = models.CharField(max_length=120, unique=True)

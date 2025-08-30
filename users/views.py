@@ -122,18 +122,17 @@ class VerifyOTPView(APIView):
         return Response(
             {
                 "access": token_data.get("access"),
-                "refresh": token_data.get("refresh"),
-                "user_session": token_data.get("user_session"),
+                "refresh": token_data.get("user_session"),
             }
         )
 
 
-@method_decorator(
-    ratelimit(key="ip", rate="5/m", method="POST", block=True), name="post"
-)
+# @method_decorator(
+#     ratelimit(key="ip", rate="5/m", method="POST", block=True), name="post"
+# )
 class SessionRefreshTokenView(APIView):
     def post(self, request):
-        user_session = request.headers.get("I-Session-Token")
+        user_session = request.headers.get("F-Session")
         print("User session: ", user_session)
 
         # Obtain the info
@@ -173,6 +172,7 @@ class SessionRefreshTokenView(APIView):
             user=user, expiry_minutes=settings.JWT_EXPIRY_MINUTES
         )
 
+        print("Hola")
         return Response(
             {
                 "access": token_data.get("access"),
@@ -230,7 +230,9 @@ class GetUserSessionViews(APIView):
             {
                 "email": user.email,
                 "username": user.username,
-                "uuid": user.uuid,
+                # "uuid": user.uuid,
+                "preferred_locale": user.preferred_locale,
+                "selected_workspace": getattr(user.selected_workspace, "wid", None),
                 "is_active": user.is_active,
                 "thumbnail": "https://imgs.search.brave.com/qFuGvnffqn2MBBFNlHdSCgE6Awxu65AwCD0SRK0j7N4/rs:fit:860:0:0:0/g:ce/aHR0cHM6Ly9pbWcu/ZnJlZXBpay5jb20v/ZnJlZS1waG90by9j/bG9zZS11cC1wb3J0/cmFpdC1iZWF1dGlm/dWwtY2F0XzIzLTIx/NDkyMTQ0MjAuanBn/P3NlbXQ9YWlzX2h5/YnJpZCZ3PTc0MA",
                 # "thumbnail": "https://imgs.search.brave.com/hhidJa6b1fsO1EhcxGb395z-L5EKutVbml09Bv87xhA/rs:fit:860:0:0:0/g:ce/aHR0cHM6Ly9jZG4u/Y3JlYXRlLnZpc3Rh/LmNvbS9hcGkvbWVk/aWEvc21hbGwvMjUz/MDQ1NDk4L3N0b2Nr/LXBob3RvLXNtYWxs/LWN1dGUtY2F0LWp1/c3QtYXR0YWNr",

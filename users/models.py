@@ -8,7 +8,8 @@ import secrets
 from django.conf import settings
 from django.utils import timezone
 from core.utils.base import obfuscate_email
-from core.models import BaseUUID, MarketingSettings, BaseTimestamp
+from core.models import BaseUUID, MarketingSettings, BaseTimestamp, BaseNanoID
+from workspace_modules.models.base import Workspace
 
 
 class UserToken(models.Model):
@@ -81,6 +82,12 @@ class EmailUserManager(BaseUserManager):
 class Account(
     AbstractBaseUser, PermissionsMixin, BaseTimestamp, BaseUUID, MarketingSettings
 ):
+    class AllowedLocales(models.TextChoices):
+        EN = "en", "English"
+        ES = "es", "Spanish"
+        UK = "uk", "Ukrainian"
+        RU = "ru", "Russian"
+
     # Authentication
     email = models.EmailField(verbose_name="email", max_length=70, unique=True)
     otp_code = models.CharField(max_length=6, blank=True)
@@ -111,9 +118,20 @@ class Account(
     first_name = models.CharField(max_length=30, blank=True)
     last_name = models.CharField(max_length=30, blank=True)
     birthday = models.DateField(null=True, blank=True)
-    preferred_language = models.CharField(max_length=10, default="es")  # ISO code
     hide_email = models.BooleanField(default=True)
     date_joined = models.DateTimeField(verbose_name="date_joined", auto_now_add=True)
+
+    # Basic Metadata info
+    preferred_locale = models.CharField(
+        choices=AllowedLocales.choices, max_length=3, default=AllowedLocales.EN
+    )
+    selected_workspace = models.ForeignKey(
+        Workspace,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="accounts",
+    )
 
     objects = EmailUserManager()
 
@@ -130,7 +148,40 @@ class Account(
         return self.is_superuser
 
     class Meta:
-        verbose_name = "Email User"
+        verbose_name = "Account"
         permissions = [
             ("can_invite_users", "Can invite users"),  # Let's copy forocoches schema
         ]
+
+
+class WorkspaceMember(BaseTimestamp):
+    class WorkspaceRole(models.TextChoices):
+        OWNER = "OWNER", "Owner"
+        ADMIN = "ADMIN", "Admin"
+        MEMBER = "MEMBER", "Member"
+        GUEST = "GUEST", "Guest"
+        INVITED = "INVITED", "Invited"
+        ON_HOLD = "ON_HOLD", "On Hold"
+
+    workspace = models.ForeignKey(
+        Workspace,
+        on_delete=models.CASCADE,
+        related_name="members",
+    )
+    account = models.ForeignKey(
+        Account, on_delete=models.CASCADE, related_name="workspace_members"
+    )
+    role = models.CharField(
+        max_length=32, choices=WorkspaceRole.choices, default=WorkspaceRole.ON_HOLD
+    )
+    is_owner = models.BooleanField(default=False)
+    is_admin = models.BooleanField(default=False)
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        verbose_name = "Workspace Member"
+        verbose_name_plural = "Workspace Members"
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.workspace.name or self.workspace.wid} | OWNER: {'YES' if self.is_owner else 'NO'} | ADMIN: {'YES' if self.is_admin else 'NO'}"
