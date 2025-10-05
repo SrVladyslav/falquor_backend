@@ -44,6 +44,7 @@ class AccountAdmin(UserAdmin):
             "Metadata",
             {
                 "fields": (
+                    "icon_style",
                     "preferred_locale",
                     "selected_workspace",
                     "hide_email",

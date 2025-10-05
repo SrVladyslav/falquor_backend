@@ -10,6 +10,7 @@ from django.utils import timezone
 from core.utils.base import obfuscate_email
 from core.models import BaseUUID, MarketingSettings, BaseTimestamp, BaseNanoID
 from workspace_modules.models.base import Workspace
+from django.db.models.functions import Lower
 
 
 class UserToken(models.Model):
@@ -88,6 +89,10 @@ class Account(
         UK = "uk", "Ukrainian"
         RU = "ru", "Russian"
 
+    class IconStyle(models.TextChoices):
+        DEFAULT = "DEFAULT", "DEFAULT"
+        EMOJI = "EMOJI", "EMOJI"
+
     # Authentication
     email = models.EmailField(verbose_name="email", max_length=70, unique=True)
     otp_code = models.CharField(max_length=6, blank=True)
@@ -125,6 +130,9 @@ class Account(
     preferred_locale = models.CharField(
         choices=AllowedLocales.choices, max_length=3, default=AllowedLocales.EN
     )
+    icon_style = models.CharField(
+        max_length=32, choices=IconStyle.choices, default=IconStyle.DEFAULT
+    )
     selected_workspace = models.ForeignKey(
         Workspace,
         on_delete=models.SET_NULL,
@@ -152,6 +160,12 @@ class Account(
         permissions = [
             ("can_invite_users", "Can invite users"),  # Let's copy forocoches schema
         ]
+        constraints = [
+            models.UniqueConstraint(
+                Lower("username"),
+                name="uniq_account_username_ci",
+            )
+        ]
 
 
 class WorkspaceMember(BaseTimestamp):
@@ -163,6 +177,11 @@ class WorkspaceMember(BaseTimestamp):
         INVITED = "INVITED", "Invited"
         ON_HOLD = "ON_HOLD", "On Hold"
 
+    class IconStyle(models.TextChoices):
+        DEFAULT = "DEFAULT", "Default"
+        EMOJI = "EMOJI", "Emoji"
+        COLORIZED = "COLORIZED", "Colorized"
+
     workspace = models.ForeignKey(
         Workspace,
         on_delete=models.CASCADE,
@@ -171,6 +190,12 @@ class WorkspaceMember(BaseTimestamp):
     account = models.ForeignKey(
         Account, on_delete=models.CASCADE, related_name="workspace_members"
     )
+    invited_by = models.ForeignKey(
+        Account,
+        on_delete=models.SET_NULL,
+        related_name="invited_members_to_ws",
+        null=True,
+    )
     role = models.CharField(
         max_length=32, choices=WorkspaceRole.choices, default=WorkspaceRole.ON_HOLD
     )
@@ -178,10 +203,15 @@ class WorkspaceMember(BaseTimestamp):
     is_admin = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
 
+    user_preferences = models.JSONField(null=True, blank=True)
+    icon_style = models.CharField(
+        max_length=32, choices=IconStyle.choices, default=IconStyle.DEFAULT
+    )
+
     class Meta:
         verbose_name = "Workspace Member"
         verbose_name_plural = "Workspace Members"
         ordering = ["-created_at"]
 
     def __str__(self):
-        return f"{self.workspace.name or self.workspace.wid} | OWNER: {'YES' if self.is_owner else 'NO'} | ADMIN: {'YES' if self.is_admin else 'NO'}"
+        return f"{self.workspace.short_name or self.workspace.wid} | OWNER: {'YES' if self.is_owner else 'NO'} | ADMIN: {'YES' if self.is_admin else 'NO'}"

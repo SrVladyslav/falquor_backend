@@ -1,6 +1,7 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework import status
+from rest_framework import status, viewsets
+from rest_framework.decorators import action
 from django.utils import timezone
 from users.models import Account
 from users.utils.base import (
@@ -17,7 +18,7 @@ from django.conf import settings
 from core.tasks.email_tasks import send_email
 from users.models import UserToken
 from rest_framework.permissions import IsAuthenticated
-from core.tasks.email_tasks import send_email
+from users.serializers import UsernameUpdateSerializer, PreferencesUpdateSerializer
 
 
 @method_decorator(
@@ -225,17 +226,21 @@ class GetUserSessionViews(APIView):
     def get(self, request):
         user = request.user
 
-        print(user.username)
+        if selected_workspace := getattr(user, "selected_workspace", None):
+            selected_workspace = selected_workspace.wid
+
         return Response(
             {
                 "email": user.email,
                 "username": user.username,
                 # "uuid": user.uuid,
                 "preferred_locale": user.preferred_locale,
+                "icon_style": user.icon_style,
                 "selected_workspace": getattr(user.selected_workspace, "wid", None),
                 "is_active": user.is_active,
                 "thumbnail": "https://imgs.search.brave.com/qFuGvnffqn2MBBFNlHdSCgE6Awxu65AwCD0SRK0j7N4/rs:fit:860:0:0:0/g:ce/aHR0cHM6Ly9pbWcu/ZnJlZXBpay5jb20v/ZnJlZS1waG90by9j/bG9zZS11cC1wb3J0/cmFpdC1iZWF1dGlm/dWwtY2F0XzIzLTIx/NDkyMTQ0MjAuanBn/P3NlbXQ9YWlzX2h5/YnJpZCZ3PTc0MA",
                 # "thumbnail": "https://imgs.search.brave.com/hhidJa6b1fsO1EhcxGb395z-L5EKutVbml09Bv87xhA/rs:fit:860:0:0:0/g:ce/aHR0cHM6Ly9jZG4u/Y3JlYXRlLnZpc3Rh/LmNvbS9hcGkvbWVk/aWEvc21hbGwvMjUz/MDQ1NDk4L3N0b2Nr/LXBob3RvLXNtYWxs/LWN1dGUtY2F0LWp1/c3QtYXR0YWNr",
+                "selected_workspace": selected_workspace,
                 "permissons": (
                     user.permissions.values_list("code", flat=True)
                     if hasattr(user, "permissions")
@@ -249,7 +254,7 @@ from rest_framework.permissions import IsAuthenticated
 from core.tasks.email_tasks import send_email
 
 
-class ProfileView(APIView):
+class ProfileViewSet(viewsets.ViewSet):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
@@ -264,4 +269,67 @@ class ProfileView(APIView):
                 "email": request.user.email,
                 "uuid": request.user.uuid,
             }
+        )
+
+    @action(detail=False, methods=["put"], url_path="username")
+    def update_username(self, request):
+        """
+        Full/partial update of username (we only accept username for now).
+        """
+        user = request.user
+        if not user.is_authenticated or not user.is_active:
+            return Response(
+                {"error": "User is inactive"},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        ser = UsernameUpdateSerializer(data=request.data, context={"request": request})
+        if not ser.is_valid():
+            return Response(
+                {"msg": "error-invalid-or-taken-username"},
+                status=status.HTTP_409_CONFLICT,
+            )
+
+        user.username = ser.validated_data["username"]
+        user.save(update_fields=["username"])
+
+        return Response(
+            {"email": user.email, "username": user.username},
+            status=status.HTTP_200_OK,
+        )
+
+    @action(detail=False, methods=["put"], url_path="preferences")
+    def update_preferences(self, request):
+        """
+        Full/partial update of the preferreed language and/or icon styles.
+        """
+        user = request.user
+        if not user.is_authenticated or not user.is_active:
+            return Response(
+                {"error": "User is inactive"},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        print("DATA: ", request.data)
+        ser = PreferencesUpdateSerializer(
+            instance=request.user,
+            data=request.data,
+            partial=True,  # allow sending one or both fields
+            context={"request": request},
+        )
+        if not ser.is_valid():
+            return Response(
+                {"msg": "error-invalid-data"},
+                status=status.HTTP_409_CONFLICT,
+            )
+
+        # Apply changes to the user account
+        ser.save()
+
+        return Response(
+            {
+                "language": request.user.preferred_locale,
+                "icon_style": request.user.icon_style,
+            },
+            status=status.HTTP_200_OK,
         )

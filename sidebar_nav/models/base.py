@@ -10,7 +10,9 @@ class SidebarScope(models.TextChoices):
 
 
 class SidebarManifest(BaseUUID, BaseTimestamp):
-    name = models.CharField(max_length=64, null=True, blank=True)  # e.g. Customers
+    name = models.CharField(
+        max_length=64, null=True, blank=True, unique=True
+    )  # e.g. Customers
     scope = models.CharField(
         max_length=15, choices=SidebarScope.choices, default=SidebarScope.GLOBAL
     )

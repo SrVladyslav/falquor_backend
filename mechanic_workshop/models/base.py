@@ -4,6 +4,7 @@ from core.models import (
     BaseTimestamp,
     # WeekWorkingHours,
     Language,
+    Tag,
 )
 from core.ctmodels import WeekWorkingHours
 from users.models import Account
@@ -43,7 +44,7 @@ class MechanicWorkshop(BusinessOrganization):
         return self.workshop_specializations.all()
 
     def __str__(self):
-        return f"{self.business_name} | {self.tax_id}"
+        return f"{self.business_name} | {self.tax_id} | {self.email} | {self.country} - {self.city} - {self.address}"
 
     class Meta:
         verbose_name = "Mechanic Workshop"
@@ -77,6 +78,26 @@ class MechanicWorkshopTeamMember(BaseTimestamp):
     class Meta:
         verbose_name = "Mechanic Workshop Team Member"
         verbose_name_plural = "Mechanic Workshop Team Members"
+
+
+class MechanicWorkshopSpecializationTag(models.Model):
+    tag = models.ForeignKey(Tag, on_delete=models.CASCADE, related_name="tag_workshops")
+    workshop = models.ForeignKey(
+        MechanicWorkshop,
+        on_delete=models.CASCADE,
+        related_name="specialization_tags",
+        blank=True,
+        null=True,
+    )
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["tag", "workshop"],
+                name="unique_tag_workshop",
+            )
+        ]
+        ordering = ["tag", "workshop"]
 
 
 class MechanicWorkshopSpecialization(models.Model):

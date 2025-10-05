@@ -47,13 +47,23 @@ class WeekWorkingHours(models.Model):
     content_type = models.ForeignKey(
         ContentType, on_delete=models.CASCADE, db_index=True
     )
-    object_id = models.PositiveBigIntegerField(db_index=True)
+    object_id = models.UUIDField(db_index=True)
     company = GenericForeignKey("content_type", "object_id")
 
     class Meta:
         verbose_name = "Week Working Hours"
         verbose_name_plural = "Week Working Hours"
         ordering = ["time_slot"]
+        indexes = [
+            models.Index(fields=["content_type", "object_id"]),
+        ]
+        constraints = [
+            # Avoid duplicated rows per owner
+            models.UniqueConstraint(
+                fields=["content_type", "object_id", "day", "time_slot"],
+                name="uniq_workinghours_per_owner_day_slot",
+            ),
+        ]
 
     def __str__(self):
         state = "OPEN" if not self.deactivate_working_hours else "OFF"

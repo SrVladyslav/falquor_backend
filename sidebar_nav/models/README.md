@@ -4,8 +4,14 @@
 {
   "meta": {
     "manifestId": "uuid-string",
+    "workspaceId": "uuid-string",
     "version": "v1",
-    "updatedAt": "2025-08-30T20:30:00Z"
+    "updatedAt": "2025-08-30T20:30:00Z",
+    "iconStyle": "default"
+  },
+  "actionButton": {
+    "type": "link",
+    "id": "new-workorder"
   },
   "items": [
     {
@@ -15,11 +21,11 @@
       "children": [
         {
           "type": "link",
-          "id": "mechanical-workshop.calendar"
+          "id": "workshop.calendar"
         },
         {
           "type": "link",
-          "id": "mechanical-workshop.workorders"
+          "id": "workshop.workorders"
         }
       ]
     },

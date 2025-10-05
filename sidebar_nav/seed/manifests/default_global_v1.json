@@ -1,0 +1,18 @@
+{
+  "actionButton": { "id": "new-workorder", "type": "link" },
+  "items": [
+    {
+      "id": "general",
+      "titleKey": "nav-general",
+      "type": "section",
+      "children": [
+        { "id": "workshop-calendar", "type": "link" }
+      ]
+    }
+  ],
+  "meta": {
+    "manifestId": "",
+    "updatedAt": "",
+    "version": "v1"
+  }
+}

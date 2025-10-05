@@ -120,6 +120,16 @@ class BusinessOrganization(BaseUUID, BaseTimestamp):
     parent_organization = models.ForeignKey(
         "self", on_delete=models.SET_NULL, null=True, blank=True
     )
+    workspace = models.ForeignKey(
+        "workspace_modules.Workspace",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="organization",
+    )
+    workspace_deleted_at = models.DateTimeField(
+        null=True, blank=True
+    )  # When deleted, should be maintained just in case for 30 days e.g.
 
     # Fraud control
     # max_parallel_active_devices = models.PositiveIntegerField(default=1)
@@ -127,7 +137,8 @@ class BusinessOrganization(BaseUUID, BaseTimestamp):
 
     # Base information
     business_name = models.CharField(max_length=100, null=False)
-    tax_id = models.CharField(max_length=50, blank=True)  # CIF/NIF
+    description = models.TextField(max_length=256, null=True, blank=True)
+    tax_id = models.CharField(max_length=50, blank=True, unique=True)  # CIF/NIF
     fax = models.CharField(max_length=100, blank=True)
     phone = models.CharField(max_length=100, blank=True)
     email = models.EmailField(max_length=100)
@@ -139,6 +150,7 @@ class BusinessOrganization(BaseUUID, BaseTimestamp):
     city = models.CharField(max_length=100, blank=True)
     state = models.CharField(max_length=100, blank=True)
     country = models.CharField(max_length=100, blank=True)
+    street = models.CharField(max_length=100, blank=True)
 
     # Time Zone
     time_zone = models.CharField(max_length=100, blank=True, default="Europe/Madrid")
@@ -155,6 +167,12 @@ class BusinessOrganization(BaseUUID, BaseTimestamp):
         abstract = True
         verbose_name = "Business Organization"
         verbose_name_plural = "Business Organizations"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["tax_id"],
+                name="tax_id_unique",
+            )
+        ]
 
 
 class BaseNotification(BaseTimestamp):
@@ -216,6 +234,13 @@ class BaseTag(models.Model):
         if not self.slug:
             self.slug = slugify(self.name)[:32]
         super().save(*args, **kwargs)
+
+
+class Tag(BaseTag):
+    class Meta:
+        verbose_name = "Tag"
+        verbose_name_plural = "Tags"
+        ordering = ["name"]
 
 
 # class TimeSlot(models.Model):

@@ -1,6 +1,5 @@
 from django.contrib import admin
 from mechanic_workshop.models.base import MechanicWorkshop
-
 from mechanic_workshop.models.service import LoanerCarHistory, LoanerCar
 from mechanic_workshop.models.vacations import WorkerVacationInformation, LeaveDay
 from mechanic_workshop.models.appointments import Appointment

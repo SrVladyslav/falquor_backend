@@ -1,11 +1,23 @@
 from django.contrib import admin
 
-from workspace_modules.models.base import Workspace, WorkspaceModule
+from workspace_modules.models.base import (
+    Workspace,
+    WorkspaceModule,
+    WorkspaceMembership,
+)
+from workspace_modules.forms import WorkspaceAdminForm
 
 
 @admin.register(Workspace)
 class WorkspaceAdmin(admin.ModelAdmin):
-    list_display = ("wid", "name", "workspace_type", "is_active", "created_at")
+    form = WorkspaceAdminForm
+    list_display = (
+        "wid",
+        "workspace_type",
+        "main_business",
+        "is_active",
+        "created_at",
+    )
     readonly_fields = ("wid",)  # se ve en la vista de edición (tras guardar)
     fieldsets = (
         (
@@ -13,13 +25,16 @@ class WorkspaceAdmin(admin.ModelAdmin):
             {
                 "fields": (
                     "wid",  # se mostrará readonly tras guardar
-                    "name",
+                    # "name",
+                    "short_name",
                     "workspace_type",
-                    "description",
                     "price",
                     "expires_at",
                     "grace_days_period",  # ojo al typo, comento abajo
                     "sidebar_manifest",
+                    "main_business_ct",
+                    "main_business_id",
+                    "time_zone",
                     "is_active",
                     "is_deleted",
                 )
@@ -29,3 +44,4 @@ class WorkspaceAdmin(admin.ModelAdmin):
 
 
 admin.site.register(WorkspaceModule)
+admin.site.register(WorkspaceMembership)
