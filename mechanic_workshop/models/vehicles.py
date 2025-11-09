@@ -28,6 +28,7 @@ class CustomerVehicle(BaseTimestamp):
     )  # e.g. 2.9D 4EA 88
     # This advanced info
     motor_brand = models.CharField(max_length=32, null=True, blank=True)
+    # motor_type = models.CharField(max_length=32, null=True, blank=True)
     cilinders = models.PositiveIntegerField(null=True, blank=True)
     cylinder_size = models.CharField(max_length=16, null=True, blank=True)
     engine_power = models.PositiveIntegerField(null=True, blank=True)  # cm^2

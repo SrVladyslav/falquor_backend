@@ -29,8 +29,7 @@ class WorkshopCustomer(BaseTimestamp, BaseUUID, MarketingSettings):
 
     # Base information
     name = models.CharField(max_length=100, blank=True, null=True)
-    first_name = models.CharField(max_length=100, blank=True)
-    last_name = models.CharField(max_length=100, blank=True)
+    surname = models.CharField(max_length=100, blank=True)
     alias = models.CharField(max_length=100, blank=True)
     email = models.EmailField(max_length=100, blank=True)
     phone = models.CharField(max_length=100, blank=True)
@@ -42,15 +41,14 @@ class WorkshopCustomer(BaseTimestamp, BaseUUID, MarketingSettings):
     # Identification number
     tax_id = models.CharField(max_length=50)  # DNI, NIF, etc.
     document_type = models.CharField(
-        choices=DocumentType, max_length=10
+        choices=DocumentType, max_length=32
     )  # DNI, NIF, etc.
 
     # Location
-    address = models.CharField(max_length=100, blank=True)
-    postal_code = models.CharField(max_length=15, blank=True)
-    city = models.CharField(max_length=100, blank=True)
-    state = models.CharField(max_length=100, blank=True)
     country = models.CharField(max_length=100, blank=True)
+    city = models.CharField(max_length=100, blank=True)
+    postal_code = models.CharField(max_length=15, blank=True)
+    address = models.CharField(max_length=100, blank=True)
 
     # Payment information
     payment_type = models.CharField(
@@ -78,8 +76,7 @@ class WorkshopCustomer(BaseTimestamp, BaseUUID, MarketingSettings):
         ordering = ["-created_at"]
         constraints = [
             CheckConstraint(
-                check=Q(name__isnull=False, name__gt="")
-                | Q(first_name__isnull=False, first_name__gt=""),
+                check=Q(name__isnull=False, name__gt=""),
                 name="name_or_firstname_required",
             )
         ]

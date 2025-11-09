@@ -1,5 +1,7 @@
 from rest_framework import serializers
 from typing import Any
+from workspace_modules.models.base import Workspace
+from mechanic_workshop.models.base import MechanicWorkshop
 
 # Incoming payload structure from your frontend (cleaned)
 # {
@@ -90,3 +92,62 @@ class WorkspaceCreateSerializer(serializers.Serializer):
             raise serializers.ValidationError(f"Unknown business_type '{raw}'.")
         value["business_type"] = normalized
         return value
+
+
+# GETTERS
+class MechanicWorkshopLiteSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MechanicWorkshop
+        fields = (
+            "business_name",
+            "description",
+            "tax_id",
+            "email",
+            "phone",
+            "website",
+            "address",
+            "city",
+            "country",
+        )
+
+
+class ListManagedWorkspacesSerialzier(serializers.ModelSerializer):
+    # Expose WID (from BaseNanoID) and human label for enum
+    wid = serializers.CharField(read_only=True)
+    workspace_type_label = serializers.CharField(
+        source="get_workspace_type_display", read_only=True
+    )
+    membership_role = serializers.CharField(read_only=True)
+    can_manage_billing = serializers.BooleanField(read_only=True)
+
+    main_business = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Workspace
+        fields = (
+            "wid",
+            "short_name",
+            "workspace_type",
+            "workspace_type_label",
+            "time_zone",
+            "price",
+            "contract_starts_at",
+            "expires_at",
+            "grace_days_period",
+            "is_active",
+            "is_deleted",
+            "membership_role",
+            "can_manage_billing",
+            "main_business",
+        )
+
+    def get_main_business(self, obj: Workspace):
+        mb = getattr(obj, "_main_business_obj", None) or obj.main_business
+        if mb is None:
+            return None
+        if isinstance(mb, MechanicWorkshop):
+            return MechanicWorkshopLiteSerializer(mb).data
+        # if isinstance(mb, Horeca):
+        #     return HorecaLiteSerializer(mb).data
+        # Fallback: tipo OTHER o desconocido
+        return {"id": str(getattr(mb, "pk", obj.main_business_id))}

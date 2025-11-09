@@ -27,4 +27,6 @@ urlpatterns = [
     path("api/v1/", include("customers.urls")),
     path("api/v1/", include("sidebar_nav.urls")),
     path("api/v1/", include("workspace_modules.urls")),
+    # Workspaces
+    path("api/v1/mechanic-workshop/", include("mechanic_workshop.urls")),
 ]

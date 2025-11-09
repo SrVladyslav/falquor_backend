@@ -93,6 +93,10 @@ class Account(
         DEFAULT = "DEFAULT", "DEFAULT"
         EMOJI = "EMOJI", "EMOJI"
 
+    class AccountType(models.TextChoices):
+        PERSONAL = "PERSONAL", "Personal"
+        BUSINESS = "BUSINESS", "Business"
+
     # Authentication
     email = models.EmailField(verbose_name="email", max_length=70, unique=True)
     otp_code = models.CharField(max_length=6, blank=True)
@@ -105,7 +109,7 @@ class Account(
     )  # Blocked in case of too many failed otp attempts
     jwt_secret = models.CharField(max_length=64, default=secrets.token_hex)
 
-    # Secutiry
+    # Security
     last_ip_address = models.GenericIPAddressField(null=True, blank=True)
     last_user_agent = models.CharField(max_length=256, blank=True)
     last_login = models.DateTimeField(verbose_name="last_login", auto_now=True)
@@ -127,6 +131,10 @@ class Account(
     date_joined = models.DateTimeField(verbose_name="date_joined", auto_now_add=True)
 
     # Basic Metadata info
+    # Account type means that we inccur in some extra costs or not, but also blocks some parts.
+    account_type = models.CharField(
+        max_length=32, choices=AccountType.choices, default=AccountType.PERSONAL
+    )
     preferred_locale = models.CharField(
         choices=AllowedLocales.choices, max_length=3, default=AllowedLocales.EN
     )
@@ -169,6 +177,8 @@ class Account(
 
 
 class WorkspaceMember(BaseTimestamp):
+    """Official relation between a Workspace and an Account."""
+
     class WorkspaceRole(models.TextChoices):
         OWNER = "OWNER", "Owner"
         ADMIN = "ADMIN", "Admin"

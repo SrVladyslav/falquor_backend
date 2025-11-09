@@ -39,8 +39,8 @@ class WorkshopCustomersViewSet(viewsets.ModelViewSet):
 
         if q:
             qs = qs.filter(
-                Q(first_name__icontains=q)
-                | Q(last_name__icontains=q)
+                Q(name__icontains=q)
+                | Q(surname__icontains=q)
                 | Q(name__icontains=q)
                 | Q(email__icontains=q)
                 | Q(phone__icontains=q)

@@ -4,7 +4,7 @@ from rest_framework.routers import DefaultRouter
 from workspace_modules.views import WorkspaceViewSet
 
 router = DefaultRouter()
-router.register(r"workspaces", WorkspaceViewSet, basename="create")
+router.register(r"workspaces", WorkspaceViewSet, basename="workspaces")
 
 urlpatterns = [
     path("", include(router.urls)),

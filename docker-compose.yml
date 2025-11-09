@@ -9,13 +9,13 @@ services:
     ports:
       - "8000:8000"
     depends_on:
-      - redis 
+      - redis
       - rabbitmq
     env_file:
       - .env
     networks:
       - backend
-  
+
   celery_worker:
     build: .
     container_name: worker
@@ -30,7 +30,7 @@ services:
       - .env
     networks:
       - backend
-  
+
   celery_email_broker:
     build: .
     container_name: email_worker
@@ -45,7 +45,7 @@ services:
       - .env
     networks:
       - backend
-  
+
   redis:
     image: "redis:8.0-alpine"
     container_name: redis_workers
@@ -60,7 +60,7 @@ services:
       - .env
     networks:
       - backend
-  
+
   # redis_insight:
   #   image: redislabs/redisinsight:2.66
   #   container_name: redis_insight
@@ -75,7 +75,7 @@ services:
   #     - redis_insights_data:/db
   #   networks:
   #     - backend
-  
+
   rabbitmq:
     image: rabbitmq:4-alpine
     container_name: rabbitmq
@@ -93,7 +93,7 @@ services:
       - RABBITMQ_DEFAULT_PASS=guest
     env_file:
       - .env
-  
+
   static-proxy:
     image: nginx:latest
     container_name: nginx
@@ -107,12 +107,24 @@ services:
     networks:
       - backend
 
+  # Services
+  pdf-renderer:
+    build: ./services/pdf-renderer
+    container_name: pdf-renderer
+    restart: always
+    env_file:
+      - .env
+    environment:
+      - RENDERER_HMAC_KEY=${RENDERER_HMAC_KEY}
+    shm_size: "256m"
+    expose:
+      - "9000"
+
 volumes:
   redis_data:
   rabbitmq_data:
   # redis_insights_data:
 #   elasticsearch:
-
 
 networks:
   backend:
