@@ -1,3 +1,4 @@
+from __future__ import annotations
 from django.db import models
 from sidebar_nav.models.base import SidebarManifest
 from core.models import BaseNanoID, BaseTimestamp, BaseUUID

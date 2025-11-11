@@ -73,8 +73,6 @@ class WorkshopCustomerCreateSerializer(serializers.ModelSerializer):
             defaults=defaults,
         )
 
-        print("Created: ", created)
-
         # Just to know if it was created or updated
         self._created = created
         return obj
