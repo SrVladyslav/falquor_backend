@@ -137,3 +137,10 @@ class PreferencesUpdateSerializer(serializers.Serializer):
 
     def create(self, validated_data: dict[str, Any]):
         raise NotImplementedError
+
+
+class UserMinimalSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Account
+        fields = ["username", "email", "uuid", "is_active", "first_name", "last_name"]
+        read_only_fields = fields

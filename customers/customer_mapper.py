@@ -21,4 +21,5 @@ def map_front_to_customer(front: dict[str, str]) -> dict[str, str]:
         "address": front.get("address"),
         "tax_id": tax_objects.get("value"),
         "document_type": doc_type,
+        "is_vehicle_owner": front.get("is_vehicle_owner"),
     }

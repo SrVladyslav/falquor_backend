@@ -98,7 +98,13 @@ class WorkOrder(BaseTimestamp):
         blank=True,
         null=True,
     )
-    workshop_number = models.PositiveIntegerField(null=True, blank=True)
+    workshop = models.ForeignKey(
+        MechanicWorkshop,
+        on_delete=models.CASCADE,
+        related_name="workorders",
+        null=True,
+        blank=True,
+    )
     attended_by = models.ForeignKey(
         MechanicWorkshopTeamMember,
         on_delete=models.SET_NULL,
@@ -108,13 +114,15 @@ class WorkOrder(BaseTimestamp):
     )
     customer_telephone = models.CharField(max_length=30, blank=True)
     # Car information
+    description = models.TextField(null=True, blank=True, max_length=1000)
+    observations = models.TextField(null=True, blank=True, max_length=1000)
+    start_mileage = models.PositiveIntegerField(blank=True, null=True)
+    end_mileage = models.PositiveIntegerField(blank=True, null=True)
     fuel_level = models.DecimalField(
         max_digits=2, decimal_places=1, null=True, blank=True
     )
-    start_mileage = models.PositiveIntegerField(blank=True, null=True)
-    end_mileage = models.PositiveIntegerField(blank=True, null=True)
-    work_to_do = models.TextField(null=True, blank=True, max_length=1024)
-    notes = models.TextField(null=True, blank=True, max_length=1024)
+    damage = models.JSONField(null=True, blank=True)
+    lights = models.JSONField(null=True, blank=True)
 
     # Workflow Metadata
     stage = models.CharField(

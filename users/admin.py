@@ -26,7 +26,10 @@ class AccountAdmin(UserAdmin):
     filter_horizontal = ()
     list_filter = ()
     fieldsets = (
-        ("Datos personales", {"fields": ("email", "username", "password")}),
+        (
+            "Datos personales",
+            {"fields": ("email", "username", "password", "first_name", "last_name")},
+        ),
         ("OTP Info", {"fields": ("otp_code", "otp_tries")}),
         (
             "Permisos",

@@ -9,10 +9,17 @@ class CustomerVehicle(BaseTimestamp):
         MechanicWorkshop, on_delete=models.CASCADE, related_name="customer_vehicles"
     )
     # Customer information
-    customer = models.ForeignKey(
+    # TODO: Shoul we add a table of presenter, so many different people can provide a car?
+    owner = models.ForeignKey(
         WorkshopCustomer,
         on_delete=models.CASCADE,
-        related_name="vehicles_in_workshops",
+        related_name="owned_vehicles",
+        null=True,
+        blank=True,
+    )
+    # Vehicle brought by to the workshop
+    authorized_people = models.ManyToManyField(
+        WorkshopCustomer, related_name="authorized_vehicles", blank=True
     )
     # General Information
     brand = models.CharField(max_length=128, null=True, blank=True)
@@ -40,10 +47,10 @@ class CustomerVehicle(BaseTimestamp):
         ordering = ["-created_at"]
         constraints = [
             models.UniqueConstraint(
-                fields=["main_workshop", "customer", "vin_number", "license_plate"],
-                name="uq_vehicle_workshop_customer_vin_plate",
+                fields=["main_workshop", "vin_number", "license_plate"],
+                name="uq_vehicle_workshop_vin_plate",
             )
         ]
 
     def __str__(self):
-        return f"{self.brand} {self.model} ({self.customer.name or self.customer.first_name})"
+        return f"{self.brand} {self.model} ({self.license_plate} - {self.main_workshop.business_name})"

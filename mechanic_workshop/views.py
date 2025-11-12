@@ -50,10 +50,17 @@ class WorkshopEntrancesViewSet(viewsets.ViewSet):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
+        if not (workorder_data := request.data.get("workorder", None)):
+            return Response(
+                {"error": "Missing workorder data"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         # ========================================================================
         # 1) Create the customer account or connect to the existing one
         # ========================================================================
         customer_data = map_front_to_customer(customer)
+        is_vehicle_owner = customer_data.get("is_vehicle_owner", False)
         print("customer_data: ", customer_data)
         # Obtain the workspace from the query parameter
         workspace = get_object_or_404(Workspace, pk=ws_id)
@@ -83,7 +90,8 @@ class WorkshopEntrancesViewSet(viewsets.ViewSet):
         # ========================================================================
         # 2) Create the Vehicle information
         # ========================================================================
-        vehicle_data["customer"] = customer_model.uuid
+        vehicle_data["owner"] = customer_model.uuid if is_vehicle_owner else None
+        vehicle_data["authorized_people"] = [customer_model.uuid]
         vehicle_data["main_workshop"] = mechanic_workshop.uuid
         vehicle_serializer = CustomerVehicleCreateSerializer(data=vehicle_data)
         print("main workshop", mechanic_workshop, type(mechanic_workshop))
@@ -99,6 +107,18 @@ class WorkshopEntrancesViewSet(viewsets.ViewSet):
         # ========================================================================
         # 3) Create the new Workorder
         # ========================================================================
+        print("\nworkorder_data: ", workorder_data)
+        # Prepare the damage data
+        damage = workorder_data.get("damage", {})
+        print("\ndamage: ", damage)
+        length = 0
+        import json
+
+        for v in damage.values():
+            d = json.dumps(v)
+            length += len(d)
+        print("\n DAMAGE LENGTH: ", length)
+
         # create_customer_account(
         #     email=request.data.get("email"),
         #     data=request.data,
@@ -121,7 +141,6 @@ class WorkshopEntrancesViewSet(viewsets.ViewSet):
             workspace__memberships__role__in=[
                 WorkspaceMembership.Roles.OWNER,
                 WorkspaceMembership.Roles.ADMIN,
-                WorkspaceMembership.Roles.MANAGER,
                 # TODO: Add more roles here
             ],
             workspace__wid=workshop_id,
