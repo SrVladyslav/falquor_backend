@@ -11,6 +11,7 @@ from core.utils.base import obfuscate_email
 from core.models import BaseUUID, MarketingSettings, BaseTimestamp, BaseNanoID
 from workspace_modules.models.base import Workspace
 from django.db.models.functions import Lower
+from django.db.models import Q, CheckConstraint
 
 
 class UserToken(models.Model):
@@ -176,22 +177,59 @@ class Account(
         ]
 
 
-class WorkspaceMember(BaseTimestamp):
-    """Official relation between a Workspace and an Account."""
+class WorkspaceMember(BaseUUID, BaseTimestamp):
+    """Official relation between a Workspace and an Account.
+
+    Can represent a Customer, a Team Member or just a some fucking business client
+    """
 
     class WorkspaceRole(models.TextChoices):
+        # ADMINS
         OWNER = "OWNER", "Owner"
         ADMIN = "ADMIN", "Admin"
+
+        # TEAM MEMBERS
         MEMBER = "MEMBER", "Member"
         GUEST = "GUEST", "Guest"
+        MANAGER = "MANAGER", "Manager"
+        TECHNICHIAN = "TECHNICIAN", "Technician"
+
+        # Just a little CUSTOMERs without any roles
+        CUSTOMER = "CUSTOMER", "Customer"
         INVITED = "INVITED", "Invited"
         ON_HOLD = "ON_HOLD", "On Hold"
+        VIEWER = "VIEWER", "Viewer"
 
     class IconStyle(models.TextChoices):
         DEFAULT = "DEFAULT", "Default"
         EMOJI = "EMOJI", "Emoji"
         COLORIZED = "COLORIZED", "Colorized"
 
+    class DocumentType(models.TextChoices):
+        PASSPORT = "PASSPORT"
+        OTHER = "OTHER"
+        # Spanish
+        DNI = "DNI"
+        NIE = "NIE"
+        NIF = "NIF"
+        # United Arab Emirates
+        TRN = "TRN"
+        EID = "EID"
+        TRADE_LICENSE = "TradeLicense"
+        # Andorra
+        NRT = "NRT"
+        # Ukraine
+        RNOKPP = "RNOKPP"
+        EDRPOU = "EDRPOU"
+        # Russia
+        INN = "INN"
+        SNILS = "SNILS"
+
+    class Type(models.TextChoices):
+        PERSON = "PERSON", "Person"
+        COMPANY = "COMPANY", "Company"
+
+    # General information
     workspace = models.ForeignKey(
         Workspace,
         on_delete=models.CASCADE,
@@ -200,15 +238,20 @@ class WorkspaceMember(BaseTimestamp):
     account = models.ForeignKey(
         Account, on_delete=models.CASCADE, related_name="workspace_members"
     )
+    customer_type = models.CharField(
+        max_length=10, choices=Type.choices, default=Type.PERSON
+    )
     invited_by = models.ForeignKey(
         Account,
         on_delete=models.SET_NULL,
         related_name="invited_members_to_ws",
         null=True,
+        blank=True,
     )
     role = models.CharField(
         max_length=32, choices=WorkspaceRole.choices, default=WorkspaceRole.ON_HOLD
     )
+    can_manage_billing = models.BooleanField(default=False)
     is_owner = models.BooleanField(default=False)
     is_admin = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
@@ -218,10 +261,59 @@ class WorkspaceMember(BaseTimestamp):
         max_length=32, choices=IconStyle.choices, default=IconStyle.DEFAULT
     )
 
+    # Base information
+    name = models.CharField(max_length=100, blank=True, null=True)
+    surname = models.CharField(max_length=100, blank=True)
+    alias = models.CharField(max_length=100, blank=True)
+    email = models.EmailField(max_length=100, blank=True)
+    phone = models.CharField(max_length=100, blank=True)
+    phone_2 = models.CharField(max_length=100, blank=True)
+    fax = models.CharField(max_length=100, blank=True)
+    birth_date = models.DateField(blank=True, null=True)
+    time_zone = models.CharField(max_length=100, blank=True, default="Europe/Madrid")
+
+    # Identification number
+    tax_id = models.CharField(max_length=50)  # DNI, NIF, etc.
+    document_type = models.CharField(
+        choices=DocumentType.choices, max_length=32, default=DocumentType.PASSPORT
+    )  # DNI, NIF, etc.
+
+    # Location
+    country = models.CharField(max_length=100, blank=True)
+    city = models.CharField(max_length=100, blank=True)
+    postal_code = models.CharField(max_length=15, blank=True)
+    address = models.CharField(max_length=100, blank=True)
+
+    # Payment information
+    payment_type = models.CharField(
+        max_length=50, blank=True
+    )  # Credit card, Paypal, etc.
+    iban = models.CharField(max_length=50, blank=True)
+    bic = models.CharField(max_length=50, blank=True)
+    ccc = models.CharField(max_length=50, blank=True)
+    bank_name = models.CharField(max_length=100, blank=True)
+    sepa_date = models.DateField(null=True, blank=True)
+
+    # Spicy information --------------------------------------
+    # Platform payment info
+    account_credits = models.IntegerField(default=0)
+    # Extra feature
+    is_defaulter = models.BooleanField(default=False)  # Moroso
+
     class Meta:
         verbose_name = "Workspace Member"
         verbose_name_plural = "Workspace Members"
         ordering = ["-created_at"]
+        unique_together = [("workspace", "account")]
+        indexes = [
+            models.Index(fields=["workspace", "account", "role", "is_active"]),
+        ]
+        # constraints = [
+        #     CheckConstraint(
+        #         check=Q(name__isnull=False, name__gt=""),
+        #         name="name_or_firstname_required",
+        #     )
+        # ]
 
     def __str__(self):
-        return f"{self.workspace.short_name or self.workspace.wid} | OWNER: {'YES' if self.is_owner else 'NO'} | ADMIN: {'YES' if self.is_admin else 'NO'}"
+        return f"({self.email or '-'} | {self.phone or '-'}) | {self.workspace.short_name or self.workspace.wid} | OWNER: {'YES' if self.is_owner else 'NO'} | ADMIN: {'YES' if self.is_admin else 'NO'}"

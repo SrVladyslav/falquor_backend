@@ -96,9 +96,6 @@ class Workspace(BaseModule):
     def has_active_membership(self) -> bool:
         return self.memberships.filter(is_active=True).exists()
 
-    # def get_active_membership(self) -> "WorkspaceMembership":
-    #     return self.memberships.filter(is_active=True).first()
-
 
 class WorkspaceModule(BaseModule):
     name = models.CharField(max_length=128, null=True, blank=True)
@@ -117,31 +114,3 @@ class WorkspaceModule(BaseModule):
 
     def __str__(self):
         return f"{self.name or self.wid}"
-
-
-class WorkspaceMembership(BaseUUID, BaseTimestamp):
-    class Roles(models.TextChoices):
-        OWNER = "OWNER", "Owner"
-        ADMIN = "ADMIN", "Admin"
-        MEMBER = "MEMBER", "Member"
-        BILLING = "BILLING", "Billing"
-
-    workspace = models.ForeignKey(
-        "Workspace", related_name="memberships", on_delete=models.CASCADE
-    )
-    # Only for the creator
-    user = models.ForeignKey(
-        "users.Account", related_name="workspace_memberships", on_delete=models.CASCADE
-    )
-    role = models.CharField(max_length=16, choices=Roles.choices, default=Roles.MEMBER)
-    can_manage_billing = models.BooleanField(default=False)
-    is_active = models.BooleanField(default=True)
-
-    class Meta:
-        unique_together = [("workspace", "user")]
-        indexes = [
-            models.Index(fields=["workspace", "user", "role", "is_active"]),
-            models.Index(fields=["workspace", "can_manage_billing"]),
-        ]
-        verbose_name = "Workspace Membership"
-        verbose_name_plural = "Workspace Memberships"

@@ -1,7 +1,8 @@
 from django.db import models
 from core.models import BaseTimestamp
-from mechanic_workshop.models.base import MechanicWorkshop, MechanicWorkshopTeamMember
+from mechanic_workshop.models.base import MechanicWorkshop
 from django.utils import timezone
+from users.models import WorkspaceMember
 
 
 class WorkerVacationInformation(models.Model):
@@ -13,7 +14,7 @@ class WorkerVacationInformation(models.Model):
         MechanicWorkshop, on_delete=models.CASCADE, related_name="vacation_information"
     )
     workshop_worker = models.ForeignKey(
-        MechanicWorkshopTeamMember,
+        WorkspaceMember,
         on_delete=models.CASCADE,
         related_name="vacation_information",
     )
@@ -36,7 +37,7 @@ class LeaveDay(BaseTimestamp):
         WorkerVacationInformation, on_delete=models.CASCADE, related_name="leave_days"
     )
     accepted_by = models.ForeignKey(
-        MechanicWorkshopTeamMember,
+        WorkspaceMember,
         on_delete=models.CASCADE,
         related_name="accepted_leave_days",
         blank=True,

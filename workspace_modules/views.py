@@ -14,7 +14,7 @@ from workspace_modules.serializers import (
 )
 from rest_framework.decorators import action
 from workspace_modules.models.base import WorkspaceModule
-from workspace_modules.models.base import Workspace, WorkspaceMembership
+from workspace_modules.models.base import Workspace
 
 
 class WorkspaceViewSet(viewsets.ViewSet):
@@ -106,11 +106,12 @@ class WorkspaceViewSet(viewsets.ViewSet):
     def get_managed_workspaces_min_info(self, request):
         account = request.user
         workspaces = Workspace.objects.filter(
-            memberships__user=account,
-            memberships__is_active=True,
-            memberships__role__in=[
-                WorkspaceMembership.Roles.OWNER,
-                WorkspaceMembership.Roles.ADMIN,
+            members__account=account,
+            members__is_active=True,
+            members__role__in=[
+                WorkspaceMember.WorkspaceRole.OWNER,
+                WorkspaceMember.WorkspaceRole.ADMIN,
+                # TO DO: Add more roles as members, etc.
             ],
         ).distinct()
 

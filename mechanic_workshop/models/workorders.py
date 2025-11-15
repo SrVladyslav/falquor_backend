@@ -1,13 +1,13 @@
 from django.db import models
-from mechanic_workshop.models.base import MechanicWorkshop, MechanicWorkshopTeamMember
+from mechanic_workshop.models.base import MechanicWorkshop
 from django.utils import timezone
 from core.models import BaseTimestamp
 from mechanic_workshop.models.vehicles import CustomerVehicle
 from django.core.exceptions import ValidationError
 from django.db import transaction
-from customers.models import WorkshopCustomer
 from mechanic_workshop.models.warehouses import WarehouseItem
 from core.utils.base import HEX_COLOR_VALIDATOR
+from users.models import WorkspaceMember
 
 
 class WorkOrderAssignment(BaseTimestamp):
@@ -15,9 +15,9 @@ class WorkOrderAssignment(BaseTimestamp):
         "WorkOrder", on_delete=models.CASCADE, related_name="assignments"
     )
     assignee = models.ForeignKey(
-        MechanicWorkshopTeamMember,
+        WorkspaceMember,
         on_delete=models.CASCADE,
-        related_name="work_order_assignments",
+        related_name="workorder_assignments",
         blank=True,
         null=True,
     )
@@ -87,12 +87,16 @@ class WorkOrder(BaseTimestamp):
         RIGHT = "RIGHT", "Right side"
 
     # General information
-    # signature = models.ImageField(upload_to="workorders/signatures")
+    # Checksum is used to hash all the data while signing the document by the customer
+    checksum = models.CharField(max_length=64, null=True, blank=True)
     customer_vehicle = models.ForeignKey(
-        CustomerVehicle, on_delete=models.CASCADE, related_name="work_orders"
+        CustomerVehicle,
+        on_delete=models.CASCADE,
+        related_name="work_orders",
+        db_index=True,
     )
     vehicle_presenter = models.ForeignKey(
-        WorkshopCustomer,
+        WorkspaceMember,
         on_delete=models.SET_NULL,
         related_name="vehicles_presented_to_workshops",
         blank=True,
@@ -104,9 +108,10 @@ class WorkOrder(BaseTimestamp):
         related_name="workorders",
         null=True,
         blank=True,
+        db_index=True,
     )
     attended_by = models.ForeignKey(
-        MechanicWorkshopTeamMember,
+        WorkspaceMember,
         on_delete=models.SET_NULL,
         related_name="work_orders_attended",
         blank=True,
@@ -118,11 +123,19 @@ class WorkOrder(BaseTimestamp):
     observations = models.TextField(null=True, blank=True, max_length=1000)
     start_mileage = models.PositiveIntegerField(blank=True, null=True)
     end_mileage = models.PositiveIntegerField(blank=True, null=True)
-    fuel_level = models.DecimalField(
+    start_fuel_level = models.DecimalField(
         max_digits=2, decimal_places=1, null=True, blank=True
     )
+    end_fuel_level = models.DecimalField(
+        max_digits=2, decimal_places=1, null=True, blank=True
+    )
+    vehicle_sketch_model = models.CharField(max_length=64, null=True, blank=True)
     damage = models.JSONField(null=True, blank=True)
     lights = models.JSONField(null=True, blank=True)
+
+    # Legal information
+    allow_repair_vehicle = models.BooleanField(default=False)
+    client_wants_replacements_back = models.BooleanField(default=False)
 
     # Workflow Metadata
     stage = models.CharField(
@@ -146,15 +159,32 @@ class WorkOrder(BaseTimestamp):
     # Insurance company
     insurance_company_info = models.CharField(max_length=256, null=True, blank=True)
 
+    # Workorder stuff
+    workshop_number = models.PositiveIntegerField(null=True, blank=True)
+
     class Meta:
         verbose_name = "Work Order"
         verbose_name_plural = "Work Orders"
         ordering = ["-created_at"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["workshop", "workshop_number"],
+                name="uniq_workshop_workshop_number",
+            )
+        ]
 
     def __str__(self):
         return f"{self.workshop} | {self.workshop_number}"
 
     # Business helpers
+    def _ensure_workshop(self) -> None:
+        """
+        Ensure the workshop FK is set.
+        If not explicitly provided, fallback to the vehicle main workshop.
+        """
+        if self.workshop_id is None and self.customer_vehicle_id is not None:
+            self.workshop = self.customer_vehicle.main_workshop
+
     def ensure_sequential_number(self):
         """
         Assign a sequential number unique per workshop if not already set.
@@ -163,14 +193,25 @@ class WorkOrder(BaseTimestamp):
         """
         if self.workshop_number is not None:
             return
-        last = (
-            WorkOrder.objects.filter(workshop=self.workshop)
-            .exclude(number__isnull=True)
-            .order_by("-workshop_number")
-            .values_list("workshop_number", flat=True)
-            .first()
-        )
-        self.workshop_number = (last or 0) + 1
+
+        # Make sure workshop FK is populated
+        self._ensure_workshop()
+        if self.workshop_id is None:
+            # If this happens you have a workflow bug: you cannot number without workshop.
+            raise ValueError(
+                "WorkOrder.ensure_sequential_number: workshop is required."
+            )
+
+        with transaction.atomic():
+            # Lock existing rows for this workshop while we compute the next number.
+            last_number = (
+                WorkOrder.objects.select_for_update()
+                .filter(workshop=self.workshop)
+                .aggregate(max_no=models.Max("workshop_number"))
+                .get("max_no")
+                or 0
+            )
+            self.workshop_number = last_number + 1
 
     def assign_next_number(self):
         """Assign the next available workshop_number to this work order."""
@@ -190,6 +231,23 @@ class WorkOrder(BaseTimestamp):
         """Return distinct assignees currently active on this WO."""
         return self.active_assignments().values_list("assignee", flat=False).distinct()
 
+    def save(self, *args, **kwargs) -> None:
+        """
+        Override save to automatically assign workshop_number on creation.
+
+        If you ever need to manually override workshop_number,
+        just set it before calling save(), and this logic will not touch it.
+        """
+        is_new = self.pk is None
+
+        # Always ensure workshop is consistent
+        self._ensure_workshop()
+
+        if is_new:
+            self.ensure_sequential_number()
+
+        super().save(*args, **kwargs)
+
     # NOTE: This is a very expensive query, so you should use it sparingly.
     # qs = (
     #     WorkOrder.objects
@@ -199,7 +257,11 @@ class WorkOrder(BaseTimestamp):
     #     )
     # )
     @property
-    def workshop(self):
+    def main_workshop(self) -> MechanicWorkshop:
+        """
+        Convenience property to access the main workshop from the vehicle.
+        Does NOT replace the workshop FK.
+        """
         return self.customer_vehicle.main_workshop
 
     @property

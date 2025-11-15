@@ -1,9 +1,8 @@
-from customers.models import WorkshopCustomer
-from users.models import Account
+from users.models import Account, WorkspaceMember
 
 
 def map_workshop_customer_to_account(
-    customer: WorkshopCustomer,
+    customer: WorkspaceMember,
     is_active: bool = False,
     is_admin: bool = False,
     is_staff: bool = False,

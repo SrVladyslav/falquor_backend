@@ -1,14 +1,14 @@
-from customers.models import WorkshopCustomer
+from users.models import WorkspaceMember
 
 
 def map_front_to_customer(front: dict[str, str]) -> dict[str, str]:
     """Map the data from the front-end to the Customer model."""
 
-    allowed_document_types = WorkshopCustomer.DocumentType.values
+    allowed_document_types = WorkspaceMember.DocumentType.values
     tax_objects: dict[str, str] = front.get("tax_id", {})
     doc_type: str = tax_objects.get("document_type")
     if doc_type not in allowed_document_types:
-        doc_type = WorkshopCustomer.DocumentType.PASSPORT
+        doc_type = WorkspaceMember.DocumentType.PASSPORT
 
     return {
         "name": front.get("name"),

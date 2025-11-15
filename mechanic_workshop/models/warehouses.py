@@ -1,9 +1,10 @@
 from django.db import models
 from core.models import BaseTimestamp, BaseUUID
-from mechanic_workshop.models.base import MechanicWorkshop, MechanicWorkshopTeamMember
+from mechanic_workshop.models.base import MechanicWorkshop
 from core.utils.base import HEX_COLOR_VALIDATOR, collapse_inline_spaces
 from django.core.validators import MinValueValidator
 import string
+from users.models import WorkspaceMember
 
 
 class Warehouse(BaseTimestamp, BaseUUID):
@@ -13,7 +14,7 @@ class Warehouse(BaseTimestamp, BaseUUID):
     space = models.PositiveIntegerField(blank=True, null=True)  # m^2
 
     responsible = models.ForeignKey(
-        MechanicWorkshopTeamMember,
+        WorkspaceMember,
         on_delete=models.SET_NULL,
         related_name="warehouses",
         null=True,

@@ -6,7 +6,6 @@ from django.utils import timezone
 
 from workspace_modules.models.base import (
     Workspace,
-    WorkspaceMembership,
     WorkspaceModule,
 )
 from mechanic_workshop.models.base import MechanicWorkshop
@@ -145,19 +144,10 @@ def provision_workspace_one_to_one(
     biz.workspace = workspace
     biz.save(update_fields=["workspace"])
 
-    # 5) Creator membership (OWNER + can_manage_billing)
-    WorkspaceMembership.objects.create(
-        workspace=workspace,
-        user=user,
-        role=WorkspaceMembership.Roles.OWNER,
-        is_active=True,
-        can_manage_billing=True,
-    )
-
-    # 6) Enable addons as modules
+    # 5) Enable addons as modules
     _enable_addons(workspace, addons)
 
-    # 7) Create the Initial WorkspaceMember for the workshop
+    # 6) Create the Initial WorkspaceMember for the workshop
     if isinstance(biz, MechanicWorkshop):
         workspace_member, _ = WorkspaceMember.objects.update_or_create(
             workspace=workspace,
@@ -168,6 +158,8 @@ def provision_workspace_one_to_one(
                 "is_owner": True,
                 "is_admin": True,
                 "invited_by": user,  # Meaning that it's the owner
+                "can_manage_billing": True,
+                "email": user.email,
             },
         )
         print("Team Member created: ", workspace_member)

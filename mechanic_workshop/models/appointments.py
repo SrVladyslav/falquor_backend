@@ -1,9 +1,9 @@
 from django.db import models
 from core.models import BaseTimestamp
-from customers.models import WorkshopCustomer
-from mechanic_workshop.models.base import MechanicWorkshop, MechanicWorkshopTeamMember
+from mechanic_workshop.models.base import MechanicWorkshop
 from mechanic_workshop.models.vehicles import CustomerVehicle
 from django.core.exceptions import ValidationError
+from users.models import WorkspaceMember
 
 
 class AppointmentType(models.TextChoices):
@@ -35,9 +35,9 @@ class AppointmentStatus(models.TextChoices):
 
 class Appointment(BaseTimestamp):
     workshop_customer = models.ForeignKey(
-        WorkshopCustomer,
+        WorkspaceMember,
         on_delete=models.CASCADE,
-        related_name="appointments",
+        related_name="customer_appointments",
         null=True,
         blank=True,
     )
@@ -56,9 +56,9 @@ class Appointment(BaseTimestamp):
         blank=True,
     )
     workshop_team_member = models.ForeignKey(
-        MechanicWorkshopTeamMember,
+        WorkspaceMember,
         on_delete=models.CASCADE,
-        related_name="appointments",
+        related_name="team_member_appointments",
         null=True,
         blank=True,
     )

@@ -7,6 +7,9 @@ python manage.py migrate
 # Init superuser 
 python manage.py init_superuser
 
+# Init sidebar manifests
+# python manage.py init_sidebars
+
 # populate groups
 # python manage.py populate_groups --delete
 

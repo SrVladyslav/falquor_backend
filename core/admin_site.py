@@ -23,13 +23,8 @@ from mechanic_workshop.models.workorders import (
     ReplacementPart,
     WorkOrderDamageSketch,
 )
-from customers.models import WorkshopCustomer
 from mechanic_workshop.models.vehicles import CustomerVehicle
 from django.urls import reverse
-from django.utils.text import capfirst
-
-from django.urls import reverse
-from django.utils.text import capfirst
 
 PREFERRED_GROUP_ORDER = [
     "Base",
@@ -321,11 +316,11 @@ register(
 )
 
 # Customer Vehicles
-register(
-    WorkshopCustomer,
-    group="Customers",
-    menu_label="Customers",
-)
+# register(
+#     WorkshopCustomer,
+#     group="Customers",
+#     menu_label="Customers",
+# )
 register(
     CustomerVehicle,
     group="Customers",

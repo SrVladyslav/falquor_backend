@@ -1,10 +1,10 @@
 from rest_framework import serializers
-from customers.models import WorkshopCustomer
+from users.models import WorkspaceMember, Account
 
 
 class WorkshopCustomerSerializer(serializers.ModelSerializer):
     class Meta:
-        model = WorkshopCustomer
+        model = WorkspaceMember
         fields = [
             "uuid",
             "created_at",
@@ -27,7 +27,7 @@ class WorkshopCustomerSerializer(serializers.ModelSerializer):
 
 class WorkshopCustomerCreateSerializer(serializers.ModelSerializer):
     class Meta:
-        model = WorkshopCustomer
+        model = WorkspaceMember
         fields = [
             "name",
             "surname",
@@ -46,14 +46,22 @@ class WorkshopCustomerCreateSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         mechanic_workshop = self.context.get("mechanic_workshop")
+        workspace = self.context.get("workspace")
         if mechanic_workshop is None:
             raise serializers.ValidationError(
                 {
                     "mechanic_workshop": "Missing mechanic_workshop in serializer context."
                 }
             )
+        if workspace is None:
+            raise serializers.ValidationError(
+                {"workspace": "Missing workspace in serializer context."}
+            )
 
         email = validated_data["email"]
+        # Check if we have an Account for this email, if not, just create it
+        account, account_created = Account.objects.get_or_create(email=email)
+        print("account_created: ", account_created, "account: ", account)
 
         defaults = {
             "name": validated_data.get("name"),
@@ -67,8 +75,9 @@ class WorkshopCustomerCreateSerializer(serializers.ModelSerializer):
             "document_type": validated_data.get("document_type"),
         }
 
-        obj, created = WorkshopCustomer.objects.update_or_create(
-            mechanic_workshop=mechanic_workshop,
+        obj, created = WorkspaceMember.objects.update_or_create(
+            workspace=workspace,
+            account=account,
             email=email,
             defaults=defaults,
         )

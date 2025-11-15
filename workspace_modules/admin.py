@@ -3,7 +3,6 @@ from django.contrib import admin
 from workspace_modules.models.base import (
     Workspace,
     WorkspaceModule,
-    WorkspaceMembership,
 )
 from workspace_modules.forms import WorkspaceAdminForm
 
@@ -44,4 +43,3 @@ class WorkspaceAdmin(admin.ModelAdmin):
 
 
 admin.site.register(WorkspaceModule)
-admin.site.register(WorkspaceMembership)

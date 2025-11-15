@@ -3,11 +3,11 @@ from rest_framework import viewsets
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
-from customers.models import WorkshopCustomer
 from customers.serializers import WorkshopCustomerSerializer
 from rest_framework.pagination import PageNumberPagination
 from django.db.models import Q
 from rest_framework.decorators import action
+from users.models import WorkspaceMember
 
 
 class SmallResultsSetPagination(PageNumberPagination):
@@ -17,14 +17,14 @@ class SmallResultsSetPagination(PageNumberPagination):
 
 
 class WorkshopCustomersViewSet(viewsets.ModelViewSet):
-    queryset = WorkshopCustomer.objects.all().order_by("-updated_at")
+    queryset = WorkspaceMember.objects.all().order_by("-updated_at")
     serializer_class = WorkshopCustomerSerializer
     permission_classes = [IsAuthenticated]
     pagination_class = SmallResultsSetPagination
 
     def get(self, request):
         user = request.user
-        customers = WorkshopCustomer.objects.filter()
+        customers = WorkspaceMember.objects.filter()
         serializer = WorkshopCustomerSerializer(customers, many=True)
 
         return Response(

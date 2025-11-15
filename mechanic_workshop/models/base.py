@@ -51,35 +51,6 @@ class MechanicWorkshop(BusinessOrganization):
         verbose_name_plural = "Mechanic Workshops"
 
 
-class MechanicWorkshopTeamMember(BaseTimestamp):
-    class Role(models.TextChoices):
-        OWNER = "OWNER", "Owner"
-        ADMIN = "ADMIN", "Admin"
-        MANAGER = "MANAGER", "Manager"
-        TECHNICHIAN = "TECHNICIAN", "Technician"
-        VIEWER = "VIEWER", "Viewer"
-
-    workshop = models.ForeignKey(
-        MechanicWorkshop, on_delete=models.CASCADE, related_name="members"
-    )
-    user_account = models.ForeignKey(
-        Account, on_delete=models.CASCADE, related_name="mechanic_workshops"
-    )
-    role = models.CharField(max_length=20, choices=Role.choices, default=Role.VIEWER)
-    is_active = models.BooleanField(default=True)
-    invited_by = models.ForeignKey(
-        Account,
-        on_delete=models.SET_NULL,
-        related_name="invited_to_mechanic_workshops",
-        null=True,
-        blank=True,
-    )
-
-    class Meta:
-        verbose_name = "Mechanic Workshop Team Member"
-        verbose_name_plural = "Mechanic Workshop Team Members"
-
-
 class MechanicWorkshopSpecializationTag(models.Model):
     tag = models.ForeignKey(Tag, on_delete=models.CASCADE, related_name="tag_workshops")
     workshop = models.ForeignKey(

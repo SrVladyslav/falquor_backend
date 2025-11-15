@@ -3,16 +3,16 @@ from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from django.utils import timezone
 from users.models import Account
+from django.db import transaction
 from django.utils.decorators import method_decorator
 from django_ratelimit.decorators import ratelimit
 from users.models import UserToken
 from rest_framework.permissions import IsAuthenticated
 from users.utils.accounts import create_customer_account
-from customers.models import WorkshopCustomer
 from customers.serializers import WorkshopCustomerCreateSerializer
 from customers.customer_mapper import map_front_to_customer
 from django.shortcuts import get_object_or_404
-from workspace_modules.models.base import Workspace, WorkspaceMembership
+from workspace_modules.models.base import Workspace
 from workspace_modules.utils.memberships import is_workspace_member
 from users.mappers import map_workshop_customer_to_account
 from mechanic_workshop.models.vehicles import CustomerVehicle
@@ -20,12 +20,17 @@ from mechanic_workshop.serializers.vehicles import (
     CustomerVehicleWorkshopListSerializer,
     CustomerVehicleCreateSerializer,
 )
+from mechanic_workshop.serializers.workorders import WorkorderCreateSerializer
+from users.models import WorkspaceMember
 from mechanic_workshop.models.base import MechanicWorkshop
+from mechanic_workshop.mappers.workorder import map_frontend_to_workorder
+import json
 
 
 class WorkshopEntrancesViewSet(viewsets.ViewSet):
     permission_classes = [IsAuthenticated]
 
+    @transaction.atomic
     def create(self, request):
         caller = request.user
         ws_id = request.query_params.get("wsId")
@@ -64,7 +69,10 @@ class WorkshopEntrancesViewSet(viewsets.ViewSet):
         print("customer_data: ", customer_data)
         # Obtain the workspace from the query parameter
         workspace = get_object_or_404(Workspace, pk=ws_id)
-        if not is_workspace_member(caller, workspace):
+        caller_ws_member, caller_is_member = is_workspace_member(
+            account=caller, workspace=workspace
+        )
+        if not caller_is_member:
             return Response(
                 {"error": "You are not a member of this workspace"},
                 status=status.HTTP_403_FORBIDDEN,
@@ -73,7 +81,12 @@ class WorkshopEntrancesViewSet(viewsets.ViewSet):
         mechanic_workshop = workspace.main_business
         print("\n mechanic_workshop: ", mechanic_workshop)
         customer_serializer = WorkshopCustomerCreateSerializer(
-            data=customer_data, context={"mechanic_workshop": mechanic_workshop}
+            data=customer_data,
+            context={
+                "caller": caller,
+                "mechanic_workshop": mechanic_workshop,
+                "workspace": workspace,
+            },
         )
         if not customer_serializer.is_valid():
             print("Invalid customer: ", customer_serializer.errors)
@@ -103,26 +116,40 @@ class WorkshopEntrancesViewSet(viewsets.ViewSet):
             )
 
         vehicle_model = vehicle_serializer.save()
-        print("Created vehicle: ", vehicle_model)
         # ========================================================================
         # 3) Create the new Workorder
         # ========================================================================
-        print("\nworkorder_data: ", workorder_data)
         # Prepare the damage data
         damage = workorder_data.get("damage", {})
-        print("\ndamage: ", damage)
         length = 0
-        import json
-
         for v in damage.values():
             d = json.dumps(v)
             length += len(d)
+
+        if length > 15000:
+            return Response(
+                {"error": "The damage sketches are too large."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        mapped_damage = map_frontend_to_workorder(front=workorder_data)
+        mapped_damage["customer_vehicle"] = vehicle_model.pk
+        mapped_damage["workshop"] = mechanic_workshop.uuid
+        mapped_damage["attended_by"] = caller_ws_member.uuid
+        mapped_damage["vehicle_presenter"] = customer_model.uuid
+        mapped_damage["customer_telephone"] = customer_model.phone
+
+        damage_serializer = WorkorderCreateSerializer(data=mapped_damage)
+        if not damage_serializer.is_valid():
+            return Response(
+                {"error": damage_serializer.errors},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        damage_model = damage_serializer.save()
+        print("Damage model: ", damage_model)
         print("\n DAMAGE LENGTH: ", length)
 
-        # create_customer_account(
-        #     email=request.data.get("email"),
-        #     data=request.data,
-        # )
         return Response(
             {"detail": "OK"},
             status=status.HTTP_201_CREATED,
@@ -136,11 +163,11 @@ class WorkshopEntrancesViewSet(viewsets.ViewSet):
         print("workshop_id: ", workshop_id)
 
         workshop = MechanicWorkshop.objects.filter(
-            workspace__memberships__user=account,
-            workspace__memberships__is_active=True,
-            workspace__memberships__role__in=[
-                WorkspaceMembership.Roles.OWNER,
-                WorkspaceMembership.Roles.ADMIN,
+            workspace__members__account=account,
+            workspace__members__is_active=True,
+            workspace__members__role__in=[
+                WorkspaceMember.WorkspaceRole.OWNER,
+                WorkspaceMember.WorkspaceRole.ADMIN,
                 # TODO: Add more roles here
             ],
             workspace__wid=workshop_id,

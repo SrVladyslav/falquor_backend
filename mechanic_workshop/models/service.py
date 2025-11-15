@@ -1,8 +1,8 @@
 from django.db import models
 from core.models import BaseTimestamp
-from mechanic_workshop.models.base import MechanicWorkshop, MechanicWorkshopTeamMember
-from customers.models import WorkshopCustomer
+from mechanic_workshop.models.base import MechanicWorkshop
 from django.utils import timezone
+from users.models import WorkspaceMember
 
 
 class LoanerCar(models.Model):
@@ -55,10 +55,10 @@ class LoanerCar(models.Model):
 
 class LoanerCarHistory(BaseTimestamp):
     used_by = models.ForeignKey(
-        WorkshopCustomer, on_delete=models.CASCADE, related_name="loaner_car_history"
+        WorkspaceMember, on_delete=models.CASCADE, related_name="loaner_car_history"
     )
     attended_by = models.ForeignKey(
-        MechanicWorkshopTeamMember,
+        WorkspaceMember,
         on_delete=models.CASCADE,
         related_name="team_member_attended",
         blank=True,

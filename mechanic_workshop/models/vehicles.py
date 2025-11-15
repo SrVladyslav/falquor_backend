@@ -1,7 +1,7 @@
 from django.db import models
-from mechanic_workshop.models.base import MechanicWorkshop, MechanicWorkshopTeamMember
+from mechanic_workshop.models.base import MechanicWorkshop
 from core.models import BaseTimestamp
-from customers.models import WorkshopCustomer
+from users.models import WorkspaceMember
 
 
 class CustomerVehicle(BaseTimestamp):
@@ -11,7 +11,7 @@ class CustomerVehicle(BaseTimestamp):
     # Customer information
     # TODO: Shoul we add a table of presenter, so many different people can provide a car?
     owner = models.ForeignKey(
-        WorkshopCustomer,
+        WorkspaceMember,
         on_delete=models.CASCADE,
         related_name="owned_vehicles",
         null=True,
@@ -19,7 +19,7 @@ class CustomerVehicle(BaseTimestamp):
     )
     # Vehicle brought by to the workshop
     authorized_people = models.ManyToManyField(
-        WorkshopCustomer, related_name="authorized_vehicles", blank=True
+        WorkspaceMember, related_name="authorized_vehicles", blank=True
     )
     # General Information
     brand = models.CharField(max_length=128, null=True, blank=True)
